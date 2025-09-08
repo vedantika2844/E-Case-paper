@@ -22,14 +22,13 @@ if not st.session_state.logged_in:
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
-    if st.button("Login"):
-        if username in users and users[username] == password:
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.success(f"Welcome, Dr. {username.capitalize()}!")
-            st.balloons()
-        else:
-            st.error("Invalid username or password.")
+   if st.button("Login"):
+    if username in users and users[username] == password:
+        st.session_state.logged_in = True
+        st.session_state.username = username
+        st.experimental_rerun()  # 💡 This clears the login form and refreshes
+    else:
+        st.error("Invalid username or password.")
 
 # Dashboard
 if st.session_state.logged_in:
