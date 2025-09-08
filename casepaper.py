@@ -48,7 +48,7 @@ def dashboard():
     # Appointments (demo)
     st.markdown("### 📅 Today's Appointments")
     appointments = [
-        {"time": "09:00 AM", "patient": "Alice Johnson"},
+        {"time": "09:00 AM", "patient": "dev"},
         {"time": "10:30 AM", "patient": "Bob Smith"},
         {"time": "01:00 PM", "patient": "Charlie Lee"},
     ]
