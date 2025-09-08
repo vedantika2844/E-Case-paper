@@ -33,6 +33,40 @@ def login():
 # Function to handle dashboard
 def dashboard():
     st.subheader(f"👨‍⚕️ Doctor Dashboard - Dr. {st.session_state.username.capitalize()}")
+    tab1, tab2 = st.tabs(["📝 All Patients", "📋 Patient Information"])
+
+    # --- Tab 1: All Patients ---
+    with tab1:
+        st.markdown("### 🧑‍🤝‍🧑 Patient List")
+        appointments = [
+            {"time": "09:00 AM", "patient": "Dev"},
+            {"time": "10:30 AM", "patient": "Bob Smith"},
+            {"time": "01:00 PM", "patient": "Charlie Lee"},
+        ]
+        for appt in appointments:
+            st.write(f"👤 {appt['patient']}")
+
+    # --- Tab 2: Patient Info ---
+    with tab2:
+        st.markdown("### 🧾 Patient Information")
+        patient_name = st.selectbox(
+            "Select a patient to view information:",
+            ["Dev", "Bob Smith", "Charlie Lee"]
+        )
+
+        # Dummy patient data
+        patient_info = {
+            "Dev": {"Age": 30, "Condition": "Flu", "Last Visit": "2025-09-01"},
+            "Riya": {"Age": 45, "Condition": "Diabetes", "Last Visit": "2025-08-25"},
+            "Anu": {"Age": 50, "Condition": "Hypertension", "Last Visit": "2025-08-30"},
+        }
+
+        if patient_name:
+            info = patient_info[patient_name]
+            st.write(f"**Name:** {patient_name}")
+            st.write(f"**Age:** {info['Age']}")
+            st.write(f"**Condition:** {info['Condition']}")
+            st.write(f"**Last Visit:** {info['Last Visit']}")
 
     # Lunch break section
     st.markdown("### 🥪 Lunch Break")
@@ -49,8 +83,8 @@ def dashboard():
     st.markdown("### 📅 Today's Appointments")
     appointments = [
         {"time": "09:00 AM", "patient": "dev"},
-        {"time": "10:30 AM", "patient": "Bob Smith"},
-        {"time": "01:00 PM", "patient": "Charlie Lee"},
+        {"time": "10:30 AM", "patient": "Riya"},
+        {"time": "01:00 PM", "patient": "Anu"},
     ]
     for appt in appointments:
         st.write(f"🕒 {appt['time']} - 👤 {appt['patient']}")
