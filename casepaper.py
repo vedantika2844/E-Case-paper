@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import sqlite3
 from datetime import datetime
 
@@ -87,10 +87,10 @@ def dashboard():
 
         if patient_name:
             info = patient_info[patient_name]
-            st.write(f"**Name:** {patient_name}")
-            st.write(f"**Age:** {info['Age']}")
-            st.write(f"**Condition:** {info['Condition']}")
-            st.write(f"**Last Visit:** {info['Last Visit']}")
+            st.write(f"*Name:* {patient_name}")
+            st.write(f"*Age:* {info['Age']}")
+            st.write(f"*Condition:* {info['Condition']}")
+            st.write(f"*Last Visit:* {info['Last Visit']}")
 
     # Lunch break section
     st.markdown("### 🥪 Lunch Break")
