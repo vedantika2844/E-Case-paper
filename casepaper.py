@@ -2,10 +2,10 @@ import mysql.connector
 
 def get_connection():
     return mysql.connector.connect(
-        host="drsimit",
-        user="root",       # 🔁 Change this
-        password="1234",   # 🔁 Change this
-        database="hospital"      # 🔁 Change this
+        host="82.180.143.66",
+        user="u263681140",       # 🔁 Change this
+        password="testStudents@123",   # 🔁 Change this
+        database="u263681140_students"      # 🔁 Change this
     )
 
 def insert_e_case(rfid, date_time, status):
