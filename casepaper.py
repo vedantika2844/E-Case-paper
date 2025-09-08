@@ -1,5 +1,8 @@
 import streamlit as st
+import sqlite3
 from datetime import datetime
+
+
 
 # Dummy user database
 users = {
@@ -14,6 +17,27 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 if "on_lunch" not in st.session_state:
     st.session_state.on_lunch = False
+    DB Utility Functions ---
+def get_connection():
+    return sqlite3.connect('patients.db')
+
+def get_all_patients():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM patients")
+    names = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return names
+
+def get_patient_info(name):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT age, condition, last_visit FROM patients WHERE name = ?", (name,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"Age": row[0], "Condition": row[1], "Last Visit": row[2]}
+    return None
 
 # Function to handle login
 def login():
