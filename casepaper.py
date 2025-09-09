@@ -1,10 +1,43 @@
 import streamlit as st
-from datetime import datetime
 import mysql.connector
+from datetime import datetime
+
+# --- DB CONNECTION ---
+def get_connection():
+    return mysql.connector.connect(
+        host="82.180.143.66",
+        user="u263681140_students",
+        password="testStudents@123",
+        database="u263681140_students"
+    )
+
+def insert_e_case(rfid, date_time, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO E_Case (RFID_No, Date_Time, Status) VALUES (%s, %s, %s)", (rfid, date_time, status))
+    conn.commit()
+    conn.close()
+
+def update_e_case(case_id, rfid, date_time, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE E_Case SET RFID_No = %s, Date_Time = %s, Status = %s WHERE id = %s", (rfid, date_time, status, case_id))
+    conn.commit()
+    conn.close()
+
+def get_all_e_cases():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM E_Case")
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    return columns, rows
+
+# --- DASHBOARD FUNCTION ---
 def dashboard():
     st.subheader(f"👨‍⚕️ Doctor Dashboard - Dr. {st.session_state.username.capitalize()}")
 
-    # --- Tabs
     tab1, tab2, tab3 = st.tabs(["📝 All Patients", "📋 Patient Information", "📥 E_Case Records"])
 
     # --- Tab 1: All Patients ---
@@ -97,3 +130,33 @@ def dashboard():
         st.session_state.on_lunch = False
         st.success("Logged out successfully.")
         st.experimental_rerun()
+
+# --- MAIN LOGIN PAGE ---
+def login_page():
+    st.title("🩺 Doctor Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username == "doctor" and password == "doctor123":
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.success("✅ Login successful")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Invalid credentials")
+
+# --- SESSION INITIALIZATION ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'username' not in st.session_state:
+    st.session_state.username = ""
+if 'on_lunch' not in st.session_state:
+    st.session_state.on_lunch = False
+
+# --- ROUTING ---
+if st.session_state.logged_in:
+    dashboard()
+else:
+    login_page()
