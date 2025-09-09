@@ -3,7 +3,7 @@ import mysql.connector
 def get_connection():
     return mysql.connector.connect(
         host="82.180.143.66",
-        user="u263681140",       # 🔁 Change this
+        user="u263681140_student",       # 🔁 Change this
         password="testStudents@123",   # 🔁 Change this
         database="u263681140_students"      # 🔁 Change this
     )
