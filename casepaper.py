@@ -120,3 +120,4 @@ def dashboard():
         st.session_state.on_lunch = False
         st.success("You have been logged out.")
         st.experimental_rerun()
+dashboard()
