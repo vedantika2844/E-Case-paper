@@ -1,8 +1,9 @@
 import streamlit as st
 import mysql.connector
+import pandas as pd
 from datetime import datetime
 
-# --- DB CONNECTION ---
+# -------------------- DB Connection --------------------
 def get_connection():
     return mysql.connector.connect(
         host="82.180.143.66",
@@ -11,6 +12,49 @@ def get_connection():
         database="u263681140_students"
     )
 
+# -------------------- Insert Patient --------------------
+def insert_patient(data):
+    conn = get_connection()
+    cursor = conn.cursor()
+    sql = """
+    INSERT INTO E_casepatient 
+    (Name, RFIDNO, Age, Gender, BloodGroup, DateofBirth, ContactNo, EmailID, Address, DoctorAssigned)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    cursor.execute(sql, data)
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+# -------------------- Fetch All Patients --------------------
+def get_all_patients():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM E_casepatient ORDER BY ID DESC")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
+
+# -------------------- Fetch Medical History --------------------
+def get_medical_history_by_rfid(rfidno):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT * FROM medical__histroy WHERE RFIDNo = %s ORDER BY ID DESC",
+            (rfidno,)
+        )
+        rows = cursor.fetchall()
+        return rows if rows else []
+    except Exception as e:
+        st.error(f"❌ Error fetching medical history: {e}")
+        return []
+    finally:
+        cursor.close()
+        conn.close()
+
+# -------------------- Appointment Functions --------------------
 def insert_e_case(rfid, date_time, status):
     conn = get_connection()
     cursor = conn.cursor()
@@ -34,7 +78,30 @@ def get_all_e_cases():
     conn.close()
     return columns, rows
 
-# --- DASHBOARD FUNCTION ---
+def get_current_appointments():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM E_Case ORDER BY Date_Time DESC")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
+
+def delete_appointment_by_rfid(rfid):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM E_Case WHERE RFID_No = %s", (rfid,))
+        conn.commit()
+        affected_rows = cursor.rowcount
+        cursor.close()
+        conn.close()
+        return affected_rows > 0
+    except Exception as e:
+        st.error(f"❌ Error deleting appointment: {e}")
+        return False
+
+# -------------------- Doctor Dashboard --------------------
 def dashboard():
     st.subheader(f"👨‍⚕️ Doctor Dashboard - Dr. {st.session_state.username.capitalize()}")
 
@@ -42,37 +109,35 @@ def dashboard():
 
     # --- Tab 1: All Patients ---
     with tab1:
-        st.markdown("### 🧑‍🤝‍🧑 Patient List")
-        appointments = [
-            {"time": "09:00 AM", "patient": "Dev"},
-            {"time": "10:30 AM", "patient": "Bob Smith"},
-            {"time": "01:00 PM", "patient": "Charlie Lee"},
-        ]
-        for appt in appointments:
-            st.write(f"🕘 {appt['time']} — 👤 {appt['patient']}")
+        st.subheader("📋 All Registered Patients")
+        data = get_all_patients()
+        if data:
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("No patients registered yet.")
 
     # --- Tab 2: Patient Info ---
     with tab2:
-        st.markdown("### 🧾 Patient Information")
-        patient_name = st.selectbox("Select a patient:", ["Dev", "Bob Smith", "Charlie Lee"])
+        st.subheader("📖 Patient Medical History")
+        appointments = get_current_appointments()
+        rfid_list = [row['RFID_No'] for row in appointments if row.get('RFID_No')]
 
-        patient_info = {
-            "Dev": {"Age": 30, "Condition": "Flu", "Last Visit": "2025-09-01"},
-            "Bob Smith": {"Age": 45, "Condition": "Diabetes", "Last Visit": "2025-08-25"},
-            "Charlie Lee": {"Age": 50, "Condition": "Hypertension", "Last Visit": "2025-08-30"},
-        }
-
-        if patient_name:
-            info = patient_info[patient_name]
-            st.write(f"**Name:** {patient_name}")
-            st.write(f"**Age:** {info['Age']}")
-            st.write(f"**Condition:** {info['Condition']}")
-            st.write(f"**Last Visit:** {info['Last Visit']}")
+        if rfid_list:
+            selected_rfid = st.selectbox("Select RFID to view history", rfid_list)
+            if selected_rfid:
+                history = get_medical_history_by_rfid(selected_rfid)
+                if history:
+                    df = pd.DataFrame(history)
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.warning("No medical history found for this patient.")
+        else:
+            st.info("No appointments yet, so no history to show.")
 
     # --- Tab 3: E_Case Records ---
     with tab3:
-        st.markdown("### 📥 Insert or Update E_Case Records")
-
+        st.subheader("📥 Insert or Update E_Case Records")
         action = st.radio("Choose Action", ["Insert New", "Update Existing"])
 
         if action == "Insert New":
@@ -100,8 +165,7 @@ def dashboard():
                 except Exception as e:
                     st.error(f"❌ Error updating record: {e}")
 
-        st.markdown("### 📋 All E_Case Records")
-
+        st.subheader("📋 All E_Case Records")
         try:
             cols, rows = get_all_e_cases()
             if rows:
@@ -112,29 +176,16 @@ def dashboard():
         except Exception as e:
             st.error(f"❌ Error loading data: {e}")
 
-    # --- Lunch Break Section ---
-    st.markdown("### 🥪 Lunch Break")
-    if st.session_state.on_lunch:
-        if st.button("End Lunch Break"):
-            st.session_state.on_lunch = False
-            st.success("Lunch break ended at " + datetime.now().strftime("%I:%M %p"))
-    else:
-        if st.button("Start Lunch Break"):
-            st.session_state.on_lunch = True
-            st.info("You're now on lunch break as of " + datetime.now().strftime("%I:%M %p"))
-
     # --- Logout Section ---
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.username = ""
-        st.session_state.on_lunch = False
         st.success("Logged out successfully.")
         st.experimental_rerun()
 
-# --- MAIN LOGIN PAGE ---
+# -------------------- Login Page --------------------
 def login_page():
     st.title("🩺 Doctor Login")
-
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
@@ -143,19 +194,17 @@ def login_page():
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success("✅ Login successful")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("❌ Invalid credentials")
 
-# --- SESSION INITIALIZATION ---
+# -------------------- Session Init --------------------
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 if 'username' not in st.session_state:
     st.session_state.username = ""
-if 'on_lunch' not in st.session_state:
-    st.session_state.on_lunch = False
 
-# --- ROUTING ---
+# -------------------- Routing --------------------
 if st.session_state.logged_in:
     dashboard()
 else:
