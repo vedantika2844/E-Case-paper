@@ -183,7 +183,7 @@ def dashboard():
                                 success = delete_appointment_by_rfid(row['RFID_No'])
                                 if success:
                                     st.success(f"✅ Appointment with RFID {row['RFID_No']} deleted.")
-                                    st.experimental_rerun()
+                                    st.rerun()  # ✅ FIXED
                                 else:
                                     st.error(f"❌ Failed to delete appointment with RFID {row['RFID_No']}.")
                         else:
@@ -198,11 +198,10 @@ def dashboard():
 
     # Logout
     elif menu == "Logout":
-        # your logout logic if you have it
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.success("Logged out successfully.")
-        st.rerun()
+        st.rerun()  # ✅ FIXED
 
 # -------------------- Login Page --------------------
 def login_page():
@@ -215,7 +214,7 @@ def login_page():
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success("✅ Login successful")
-            st.experimental_rerun()
+            st.rerun()  # ✅ FIXED
         else:
             st.error("❌ Invalid credentials")
 
