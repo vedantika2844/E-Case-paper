@@ -202,7 +202,7 @@ def dashboard():
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.success("Logged out successfully.")
-        st.experimental_rerun()
+        st.rerun()
 
 # -------------------- Login Page --------------------
 def login_page():
