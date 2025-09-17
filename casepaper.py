@@ -107,9 +107,9 @@ def dashboard():
             submitted = st.form_submit_button("Register Patient")
             if submitted:
                 try:
-                    age = int(age)
+                    age_int = int(age)
                     dob_str = dob.strftime('%Y-%m-%d')
-                    insert_patient((name, rfid, age, gender, blood_group, dob_str,
+                    insert_patient((name, rfid, age_int, gender, blood_group, dob_str,
                                     contact, email, address, doctor))
                     st.success("✅ Patient registered successfully!")
                 except Exception as e:
@@ -155,7 +155,42 @@ def dashboard():
             appointments = get_current_appointments()
             if appointments:
                 df = pd.DataFrame(appointments)
-                st.dataframe(df, use_container_width=True)
+
+                # Check necessary columns
+                if {'RFID_No', 'Date_Time', 'Status'}.issubset(df.columns):
+                    for i, row in df.iterrows():
+                        cols = st.columns([3, 3, 2, 2])
+                        cols[0].write(f"**RFID:** {row['RFID_No']}")
+                        cols[1].write(f"**Date & Time:** {row['Date_Time']}")
+
+                        # Safely parse status
+                        status_raw = row.get('Status', 0)
+                        try:
+                            status_value = int(status_raw)
+                        except:
+                            status_value = 0
+
+                        if status_value == 1:
+                            status_str = "🟢 Active"
+                        else:
+                            status_str = "🔴 Inactive"
+
+                        cols[2].write(f"**Status:** {status_str}")
+
+                        # Show update button only if status == 1
+                        if status_value == 1:
+                            if cols[3].button("Update", key=f"update_btn_{i}_{row['RFID_No']}"):
+                                success = delete_appointment_by_rfid(row['RFID_No'])
+                                if success:
+                                    st.success(f"✅ Appointment with RFID {row['RFID_No']} deleted.")
+                                    st.experimental_rerun()
+                                else:
+                                    st.error(f"❌ Failed to delete appointment with RFID {row['RFID_No']}.")
+                        else:
+                            cols[3].write("")  # blank if status != 1
+                else:
+                    st.warning("Expected columns not found in appointments data.")
+                    st.dataframe(df)
             else:
                 st.info("No current appointments found.")
         except Exception as e:
@@ -163,10 +198,11 @@ def dashboard():
 
     # Logout
     elif menu == "Logout":
+        # your logout logic if you have it
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.success("Logged out successfully.")
-        st.rerun()
+        st.experimental_rerun()
 
 # -------------------- Login Page --------------------
 def login_page():
@@ -179,7 +215,7 @@ def login_page():
             st.session_state.logged_in = True
             st.session_state.username = username
             st.success("✅ Login successful")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("❌ Invalid credentials")
 
@@ -189,7 +225,7 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# -------------------- Routing --------------------
+# -------------------- Start --------------------
 if st.session_state.logged_in:
     dashboard()
 else:
