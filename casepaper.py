@@ -37,7 +37,7 @@ def get_all_patients():
     return rows
 
 # -------------------- Fetch Medical History --------------------
-def get_medical_history_by_rfid(rfidno):
+def get_medical_history_by_rfid(rfidno="41E2014B"):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -54,39 +54,22 @@ def get_medical_history_by_rfid(rfidno):
         cursor.close()
         conn.close()
 
-# -------------------- Appointment Functions --------------------
-def insert_e_case(rfid, date_time, status):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO E_Case (RFID_No, Date_Time, Status) VALUES (%s, %s, %s)", (rfid, date_time, status))
-    conn.commit()
-    conn.close()
-
-def update_e_case(case_id, rfid, date_time, status):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE E_Case SET RFID_No = %s, Date_Time = %s, Status = %s WHERE id = %s", (rfid, date_time, status, case_id))
-    conn.commit()
-    conn.close()
-
-def get_all_e_cases():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM E_Case")
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    conn.close()
-    return columns, rows
-
+# -------------------- Fetch Appointments --------------------
 def get_current_appointments():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM E_Case ORDER BY Date_Time DESC")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return rows
+    try:
+        cursor.execute("SELECT * FROM E_Case ORDER BY Date_Time DESC")
+        rows = cursor.fetchall()
+        return rows
+    except Exception as e:
+        st.error(f"❌ Failed to fetch appointments: {e}")
+        return []
+    finally:
+        cursor.close()
+        conn.close()
 
+# -------------------- Delete Appointment By RFID --------------------
 def delete_appointment_by_rfid(rfid):
     try:
         conn = get_connection()
@@ -101,87 +84,89 @@ def delete_appointment_by_rfid(rfid):
         st.error(f"❌ Error deleting appointment: {e}")
         return False
 
-# -------------------- Doctor Dashboard --------------------
+# -------------------- Dashboard --------------------
 def dashboard():
-    st.subheader(f"👨‍⚕️ Doctor Dashboard - Dr. {st.session_state.username.capitalize()}")
+    st.sidebar.title("📌 Menu")
+    menu = st.sidebar.radio("Select Option", ["Register Patient", "View All Patients", "View Medical History", "Current Appointments", "Logout"])
 
-    tab1, tab2, tab3 = st.tabs(["📝 All Patients", "📋 Patient Information", "📥 E_Case Records"])
-
-    # --- Tab 1: All Patients ---
-    with tab1:
-        st.subheader("📋 All Registered Patients")
-        data = get_all_patients()
-        if data:
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No patients registered yet.")
-
-    # --- Tab 2: Patient Info ---
-    with tab2:
-        st.subheader("📖 Patient Medical History")
-        appointments = get_current_appointments()
-        rfid_list = [row['RFID_No'] for row in appointments if row.get('RFID_No')]
-
-        if rfid_list:
-            selected_rfid = st.selectbox("Select RFID to view history", rfid_list)
-            if selected_rfid:
-                history = get_medical_history_by_rfid(selected_rfid)
-                if history:
-                    df = pd.DataFrame(history)
-                    st.dataframe(df, use_container_width=True)
-                else:
-                    st.warning("No medical history found for this patient.")
-        else:
-            st.info("No appointments yet, so no history to show.")
-
-    # --- Tab 3: E_Case Records ---
-    with tab3:
-        st.subheader("📥 Insert or Update E_Case Records")
-        action = st.radio("Choose Action", ["Insert New", "Update Existing"])
-
-        if action == "Insert New":
+    # Register Patient
+    if menu == "Register Patient":
+        with st.form("patient_form"):
+            st.subheader("Register New Patient")
+            name = st.text_input("Full Name")
             rfid = st.text_input("RFID No")
-            date_time = st.text_input("Date & Time (YYYY-MM-DD HH:MM:SS)")
-            status = st.text_input("Status")
+            age = st.text_input("Age")
+            gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+            blood_group = st.text_input("Blood Group")
+            dob = st.date_input("Date of Birth")
+            contact = st.text_input("Contact Number")
+            email = st.text_input("Email ID")
+            address = st.text_area("Address")
+            doctor = st.text_input("Doctor Assigned")
 
-            if st.button("Insert Record"):
+            submitted = st.form_submit_button("Register Patient")
+            if submitted:
                 try:
-                    insert_e_case(rfid, date_time, status)
-                    st.success("✅ Record inserted successfully!")
+                    age = int(age)
+                    dob_str = dob.strftime('%Y-%m-%d')
+                    insert_patient((name, rfid, age, gender, blood_group, dob_str,
+                                    contact, email, address, doctor))
+                    st.success("✅ Patient registered successfully!")
                 except Exception as e:
-                    st.error(f"❌ Error inserting record: {e}")
+                    st.error(f"❌ Error: {e}")
 
-        elif action == "Update Existing":
-            case_id = st.number_input("E_Case ID to Update", min_value=1, step=1)
-            rfid = st.text_input("New RFID No")
-            date_time = st.text_input("New Date & Time (YYYY-MM-DD HH:MM:SS)")
-            status = st.text_input("New Status")
-
-            if st.button("Update Record"):
-                try:
-                    update_e_case(case_id, rfid, date_time, status)
-                    st.success("✅ Record updated successfully!")
-                except Exception as e:
-                    st.error(f"❌ Error updating record: {e}")
-
-        st.subheader("📋 All E_Case Records")
+    # View All Patients
+    elif menu == "View All Patients":
+        st.subheader("📋 All Registered Patients")
         try:
-            cols, rows = get_all_e_cases()
-            if rows:
-                df_data = [dict(zip(cols, row)) for row in rows]
-                st.dataframe(df_data, use_container_width=True)
+            data = get_all_patients()
+            if data:
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
             else:
-                st.info("No E_Case records found.")
+                st.info("No patients registered yet.")
         except Exception as e:
-            st.error(f"❌ Error loading data: {e}")
+            st.error(f"❌ Error fetching patients: {e}")
 
-    # --- Logout Section ---
-    if st.button("Logout"):
+    # View Medical History
+    elif menu == "View Medical History":
+        st.subheader("📖 Medical History Records")
+        try:
+            appointments = get_current_appointments()
+            rfid_list = [row['RFID_No'] for row in appointments if row.get('RFID_No')]
+            if rfid_list:
+                selected_rfid = st.selectbox("Select RFID to view history", rfid_list)
+                if selected_rfid:
+                    data = get_medical_history_by_rfid(selected_rfid)
+                    if data:
+                        df = pd.DataFrame(data)
+                        st.dataframe(df, use_container_width=True)
+                    else:
+                        st.warning(f"No history found for RFID {selected_rfid}")
+            else:
+                st.info("No RFID numbers found in current appointments.")
+        except Exception as e:
+            st.error(f"❌ Error fetching history: {e}")
+
+    # Current Appointments
+    elif menu == "Current Appointments":
+        st.subheader("📅 Current Appointments")
+        try:
+            appointments = get_current_appointments()
+            if appointments:
+                df = pd.DataFrame(appointments)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("No current appointments found.")
+        except Exception as e:
+            st.error(f"❌ Error fetching appointments: {e}")
+
+    # Logout
+    elif menu == "Logout":
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.success("Logged out successfully.")
-        st.experimental_rerun()
+        st.rerun()
 
 # -------------------- Login Page --------------------
 def login_page():
@@ -198,10 +183,10 @@ def login_page():
         else:
             st.error("❌ Invalid credentials")
 
-# -------------------- Session Init --------------------
-if 'logged_in' not in st.session_state:
+# -------------------- Session --------------------
+if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if 'username' not in st.session_state:
+if "username" not in st.session_state:
     st.session_state.username = ""
 
 # -------------------- Routing --------------------
